@@ -10,6 +10,7 @@
     </style>
 </head>
 <body>
+  <input type="hidden" id="wsURL" th:value="${wsURL}">
   <div>欢迎您！<i th:text="${username}" id="username"></i></div>
   <table width="100%" height="100%" border="1px" cellspacing="0">
       <tr>
@@ -64,8 +65,9 @@
        */
       function initWebSocket() {
           if (window.WebSocket) {
-              console.info("开始连接服务端...");
-              websocket = new WebSocket("ws://127.0.0.1:8082");
+              var wsURL = $("#wsURL").val();
+              console.info("开始连接服务端：" + wsURL);
+              websocket = new WebSocket(wsURL);
 
               /**
                * 连接已建立
