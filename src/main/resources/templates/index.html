@@ -46,8 +46,7 @@
           </td>
           <td width="25%" align="center" style="vertical-align: top">
               <div class="title">所有联系人</div>
-              <div style="width:100%;">
-
+              <div style="width:100%;" id="onlineDiv">
               </div>
           </td>
       </tr>
@@ -65,72 +64,120 @@
        */
       function initWebSocket() {
           if (window.WebSocket) {
-              var wsURL = $("#wsURL").val();
-              console.info("开始连接服务端：" + wsURL);
-              websocket = new WebSocket(wsURL);
-
-              /**
-               * 连接已建立
-               */
-              websocket.onopen = function (ev) {
-                  showMessage("连接已建立");
-
-                  var jsonMsg = {
-                      type: 0,
-                      username: $("#username").html()
-                  };
-                  var jsonString = JSON.stringify(jsonMsg);
-                  console.info("用户登录信息：" + JSON.stringify(jsonString));
-                  websocket.send(jsonString);
-              }
-
-              /**
-               * 接收到消息
-               */
-              websocket.onmessage = function (ev) {
-                  if (!ev) {
-                      return;
-                  }
-
-                  console.info("收到消息：" + ev.data);
-                  var jsonMessage = JSON.parse(ev.data);
-
-                  switch (jsonMessage.type) {
-                      case 0: // 登录响应
-                          showMessage("登录成功");
-                          break;
-                      case 1: // 收到消息
-                          // 显示自己发的消息
-                          if (jsonMessage.sender == $("#username").html()) {
-                              var msg = "我:\n  " + jsonMessage.message;
-                              showMessage(msg);
-                              break;
-                          }
-
-                          // 显示他人的消息
-                          var msg = jsonMessage.sender + ":\n  " + jsonMessage.message;
-                          showMessage(msg);
-                          break;
-                      default:
-                          break;
-                  }
-              }
-
-              /**
-               * 连接已关闭
-               */
-              websocket.onclose = function (ev) {
-                  showMessage("连接已关闭");
-              }
-
-              /**
-               * 发生错误
-               */
-              websocket.onerror = function (ev) {
-                  showMessage("连接错误" + ev);
-              }
+              // 连接服务端
+              connect();
           } else {
               alert("您的浏览器不支持WebSocket协议^_^");
+          }
+      }
+
+      /**
+       * 连接服务端
+       */
+      function connect() {
+          var wsURL = $("#wsURL").val();
+          console.info("开始连接服务端：" + wsURL);
+          websocket = new WebSocket(wsURL);
+
+          /**
+           * 连接已建立
+           */
+          websocket.onopen = function (ev) {
+              showMessage("连接已建立");
+
+              // 发送登录请求
+              login();
+          }
+
+          /**
+           * 接收到消息
+           */
+          websocket.onmessage = function (ev) {
+              if (!ev) {
+                  return;
+              }
+              // 消息接收处理
+              onmessageHandler(ev);
+          }
+
+          /**
+           * 连接已关闭
+           */
+          websocket.onclose = function (ev) {
+              showMessage("连接已关闭");
+
+              // 重新连接服务端
+              reconnect();
+          }
+
+          /**
+           * 发生错误
+           */
+          websocket.onerror = function (ev) {
+              showMessage("连接错误" + ev);
+
+              // 重新连接服务端
+              reconnect();
+          }
+      }
+
+      /**
+       * 重新连接服务端
+       */
+      function reconnect() {
+          showMessage("等待3秒后重新连接服务端");
+          setTimeout("connect()", 3000);
+      }
+
+      /**
+       * 登录
+       */
+      function login() {
+          var jsonMsg = {
+              type: 0,
+              username: $("#username").html()
+          };
+          var jsonString = JSON.stringify(jsonMsg);
+          console.info("用户登录信息：" + JSON.stringify(jsonString));
+          websocket.send(jsonString);
+      }
+
+      /**
+       * 消息接收处理器
+       */
+      function onmessageHandler(ev) {
+          console.info("收到消息：" + ev.data);
+          var jsonMessage = JSON.parse(ev.data);
+
+          switch (jsonMessage.type) {
+              case 0: // 登录响应
+                  showMessage("登录成功");
+                  break;
+              case 1: // 收到消息
+                  // 显示自己发的消息
+                  if (jsonMessage.sender == $("#username").html()) {
+                      var msg = "我:\n  " + jsonMessage.message;
+                      showMessage(msg);
+                      break;
+                  }
+
+                  // 显示他人的消息
+                  var msg = jsonMessage.sender + ":\n  " + jsonMessage.message;
+                  showMessage(msg);
+                  break;
+              case 2: // 在线用户列表
+                  var onlineHtml = "";
+                  for (var i in jsonMessage.userList) {
+                      var user = jsonMessage.userList[i];
+                      onlineHtml += "<div style='text-align: left;margin-left: 20px;'>";
+                      onlineHtml += "<span><image src='/images/lisi.png' width='25px'></span>";
+                      onlineHtml += "<span style='margin-left: 10px'>" + user.username + "</span>";
+                      onlineHtml += "</div>";
+                  }
+                  $("#onlineDiv").html(onlineHtml);
+                  break;
+              default:
+                  break;
           }
       }
 
@@ -151,12 +198,16 @@
               return;
           }
 
+          /* 发送消息 */
           var jsonMessage = {
               type: 1,
               message: $("#message").val()
           };
           var jsonString = JSON.stringify(jsonMessage);
           websocket.send(jsonString);
+          // websocket.send($("#message").val()); // 用于测试连接异常后重连
+
+          // 清空输入框
           $("#message").val("");
       });
 
