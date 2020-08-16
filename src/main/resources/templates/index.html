@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8" />
+    <title>首页</title>
+    <script type="text/javascript" th:src="@{/js/jquery-3.1.1.min.js}"></script>
+    <style type="text/css">
+        .title{font-weight: bold}
+    </style>
+</head>
+<body>
+  <div>欢迎您！<i th:text="${username}" id="username"></i></div>
+  <table width="100%" height="100%" border="1px" cellspacing="0">
+      <tr>
+          <td width="25%" align="center" style="vertical-align: top">
+              <div class="title">最近联系人</div>
+              <div style="width:100%;">
+
+              </div>
+          </td>
+          <td width="50%" align="center" style="vertical-align: top">
+              <div class="title">聊天窗口</div>
+              <div>
+                  <table width="100%">
+                      <tr><td>
+                          <textarea style="height:350px;width:100%;resize:none;overflow-y:hidden;" name="messagesWindow" id="messagesWindow" readonly></textarea>
+                      </td></tr>
+                  </table>
+              </div>
+              <div>
+                  <table width="100%">
+                      <tr>
+                          <td width="80%">
+                              <textarea rows="6" style="width: 100%;resize:none;overflow-y:hidden;" id="message"></textarea>
+                          </td>
+                          <td align="center">
+                              <input type="button" id="sendButton" value="发 送">
+                              <span style="width:20px;"></span>
+                              <input type="button" id="logoutButton" value="退 出">
+                          </td>
+                      </tr>
+                  </table>
+              </div>
+          </td>
+          <td width="25%" align="center" style="vertical-align: top">
+              <div class="title">所有联系人</div>
+              <div style="width:100%;">
+
+              </div>
+          </td>
+      </tr>
+  </table>
+
+  <script type="text/javascript">
+      var websocket;
+
+      $(function () {
+          initWebSocket();
+      });
+
+      /**
+       * 初始化WebSocket
+       */
+      function initWebSocket() {
+          if (window.WebSocket) {
+              console.info("开始连接服务端...");
+              websocket = new WebSocket("ws://127.0.0.1:8082");
+
+              /**
+               * 连接已建立
+               */
+              websocket.onopen = function (ev) {
+                  showMessage("连接已建立");
+
+                  var jsonMsg = {
+                      type: 0,
+                      username: $("#username").html()
+                  };
+                  var jsonString = JSON.stringify(jsonMsg);
+                  console.info("用户登录信息：" + JSON.stringify(jsonString));
+                  websocket.send(jsonString);
+              }
+
+              /**
+               * 接收到消息
+               */
+              websocket.onmessage = function (ev) {
+                  if (!ev) {
+                      return;
+                  }
+
+                  console.info("收到消息：" + ev.data);
+                  var jsonMessage = JSON.parse(ev.data);
+
+                  switch (jsonMessage.type) {
+                      case 0: // 登录响应
+                          showMessage("登录成功");
+                          break;
+                      case 1: // 收到消息
+                          // 显示自己发的消息
+                          if (jsonMessage.sender == $("#username").html()) {
+                              var msg = "我:\n  " + jsonMessage.message;
+                              showMessage(msg);
+                              break;
+                          }
+
+                          // 显示他人的消息
+                          var msg = jsonMessage.sender + ":\n  " + jsonMessage.message;
+                          showMessage(msg);
+                          break;
+                      default:
+                          break;
+                  }
+              }
+
+              /**
+               * 连接已关闭
+               */
+              websocket.onclose = function (ev) {
+                  showMessage("连接已关闭");
+              }
+
+              /**
+               * 发生错误
+               */
+              websocket.onerror = function (ev) {
+                  showMessage("连接错误" + ev);
+              }
+          } else {
+              alert("您的浏览器不支持WebSocket协议^_^");
+          }
+      }
+
+      /**
+       * 追加显示消息到聊天窗口
+       */
+      function showMessage(msg) {
+          var messagesWindow = $("#messagesWindow");
+          $("#messagesWindow").append(msg + " \n").scrollTop(messagesWindow[0].scrollHeight - messagesWindow.height());
+      }
+
+      /**
+       * 发送消息
+       */
+      $("#sendButton").click(function () {
+          if (!$("#message").val()) {
+              console.info("message is empty");
+              return;
+          }
+
+          var jsonMessage = {
+              type: 1,
+              message: $("#message").val()
+          };
+          var jsonString = JSON.stringify(jsonMessage);
+          websocket.send(jsonString);
+          $("#message").val("");
+      });
+
+      /**
+       * 退出
+       */
+      $("#logoutButton").click(function() {
+          console.info("ready to logout...");
+          window.location = "/logout";
+      });
+  </script>
+</body>
+</html>
