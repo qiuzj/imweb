@@ -15,13 +15,12 @@
   <table width="100%" height="100%" border="1px" cellspacing="0">
       <tr>
           <td width="25%" align="center" style="vertical-align: top">
-              <div class="title">最近联系人</div>
-              <div style="width:100%;">
-
+              <div class="title">聊天室列表</div>
+              <div style="width:100%;" id="roomListDiv">
               </div>
           </td>
           <td width="50%" align="center" style="vertical-align: top">
-              <div class="title">聊天窗口</div>
+              <div class="title">欢迎光临</div>
               <div>
                   <table width="100%">
                       <tr><td>
@@ -37,15 +36,14 @@
                           </td>
                           <td align="center">
                               <input type="button" id="sendButton" value="发 送">
-                              <span style="width:20px;"></span>
-                              <input type="button" id="logoutButton" value="退 出">
+                              <input type="button" id="logoutButton" value="退 出" style="margin-left: 15px">
                           </td>
                       </tr>
                   </table>
               </div>
           </td>
           <td width="25%" align="center" style="vertical-align: top">
-              <div class="title">所有联系人</div>
+              <div class="title">在线用户列表</div>
               <div style="width:100%;" id="onlineDiv">
               </div>
           </td>
@@ -54,6 +52,7 @@
 
   <script type="text/javascript">
       var websocket;
+      var roomName;
 
       $(function () {
           initWebSocket();
@@ -165,7 +164,24 @@
                   var msg = jsonMessage.sender + ":\n  " + jsonMessage.message;
                   showMessage(msg);
                   break;
-              case 2: // 在线用户列表
+              case 4:
+                  var newHtml = "";
+                  for (var i in jsonMessage.roomList) {
+                      var room = jsonMessage.roomList[i];
+                      newHtml += "<div style='text-align: left;margin-left: 20px;'>";
+                      newHtml += "<span><image src='/images/wangwu.png' width='25px'></span>";
+                      newHtml += "<span style='margin-left: 10px'>" + room.name + "(" + room.onlineNum + ")";
+                      newHtml += "</span>";
+                      newHtml += "<input type='button' value='加入' onclick='joinRoom(\"" + room.name + "\")' style='margin-left: 50px'>";
+                      newHtml += "<input type='button' value='退出' style='margin-left: 10px'>";
+                      newHtml += "</div>";
+                  }
+                  $("#roomListDiv").html(newHtml);
+                  break;
+              case 6: // 加入聊天室响应
+                  roomName = jsonMessage.roomName;
+                  break;
+              case 8: // 在线用户列表
                   var onlineHtml = "";
                   for (var i in jsonMessage.userList) {
                       var user = jsonMessage.userList[i];
@@ -179,6 +195,21 @@
               default:
                   break;
           }
+      }
+
+      /**
+       * 加入聊天室
+       */
+      function joinRoom(roomName) {
+          var jsonMessage = {
+              type: 6,
+              roomName: roomName
+          };
+          var jsonString = JSON.stringify(jsonMessage);
+          websocket.send(jsonString);
+
+          $("#messagesWindow").val("正在等待加入聊天室：" + roomName);
+          $("#onlineDiv").html("");
       }
 
       /**
@@ -198,9 +229,16 @@
               return;
           }
 
+          // 检查聊天室名称
+          if (!roomName) {
+              alert("获取不到聊天室信息：" + roomName);
+              return;
+          }
+
           /* 发送消息 */
           var jsonMessage = {
               type: 1,
+              roomName: roomName,
               message: $("#message").val()
           };
           var jsonString = JSON.stringify(jsonMessage);
