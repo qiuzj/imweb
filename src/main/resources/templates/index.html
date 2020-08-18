@@ -20,7 +20,7 @@
               </div>
           </td>
           <td width="50%" align="center" style="vertical-align: top">
-              <div class="title">欢迎光临</div>
+              <div class="title" id="chatTitle">欢迎光临</div>
               <div>
                   <table width="100%">
                       <tr><td>
@@ -52,11 +52,51 @@
 
   <script type="text/javascript">
       var websocket;
-      var roomName;
+      var currentRoomName;
+      var DEFAULT_TITLE = "欢迎光临，请选择一个聊天室进行畅聊吧^_^";
 
       $(function () {
+          init();
           initWebSocket();
       });
+
+      /**
+       * 初始化配置
+       */
+      function init() {
+          $("#chatTitle").html(DEFAULT_TITLE);
+          // 禁用网页事件
+          forbidWebEvent();
+      }
+
+      /**
+       * 禁用网页事件
+       */
+      function forbidWebEvent() {
+          $(document).off().on("keydown", function (event) {
+              var key = event.keyCode;
+              // console.info("keyCode:" + key);
+              //便于说明，下面代码使用多个if，应用时可使用"||"合并
+              if (key == 116) {
+                  //禁用F5刷新
+                  return false;
+              } else if (key == 27) {
+                  //禁用esc键
+                  return false;
+                  // } else if (key == 8) {
+                  //     //禁用Backspace退格键
+                  //     return false;
+              } else if(event.ctrlKey && key==82){
+                  //禁用ctrl+R刷新
+                  return false;
+              }
+          });
+          // $(document).on("contextmenu", function (e) {
+          //     console.info("contextmenu: " + e);
+          //     //...此处定义自己的右键菜单
+          //     return false;
+          // });
+      }
 
       /**
        * 初始化WebSocket
@@ -164,22 +204,31 @@
                   var msg = jsonMessage.sender + ":\n  " + jsonMessage.message;
                   showMessage(msg);
                   break;
-              case 4:
+              case 4: // 显示聊天室列表
                   var newHtml = "";
                   for (var i in jsonMessage.roomList) {
                       var room = jsonMessage.roomList[i];
                       newHtml += "<div style='text-align: left;margin-left: 20px;'>";
                       newHtml += "<span><image src='/images/wangwu.png' width='25px'></span>";
-                      newHtml += "<span style='margin-left: 10px'>" + room.name + "(" + room.onlineNum + ")";
+                      newHtml += "<span style='margin-left: 10px' id='" + room.name + "'>" + room.name + "(" + room.onlineNum + ")";
                       newHtml += "</span>";
-                      newHtml += "<input type='button' value='加入' onclick='joinRoom(\"" + room.name + "\")' style='margin-left: 50px'>";
-                      newHtml += "<input type='button' value='退出' style='margin-left: 10px'>";
+                      newHtml += "<input type='button' value='加入' onclick='joinRoom(\"" + room.name + "\")' style='margin-left: 50px' id='join" + room.name + "'>";
+                      newHtml += "<input type='button' value='退出' onclick='exitRoom(\"" + room.name + "\")' style='margin-left: 10px'>";
                       newHtml += "</div>";
                   }
                   $("#roomListDiv").html(newHtml);
+                  if (currentRoomName) {
+                      $("#join" + currentRoomName).hide();
+                  }
                   break;
               case 6: // 加入聊天室响应
-                  roomName = jsonMessage.roomName;
+                  currentRoomName = jsonMessage.roomName;
+                  $("#chatTitle").html("聊天室：" + currentRoomName);
+                  $("#join" + currentRoomName).hide();
+                  showMessage("成功加入聊天室：" + currentRoomName);
+                  break;
+              case 7: // 退出聊天室响应
+                  $("#chatTitle").html(DEFAULT_TITLE);
                   break;
               case 8: // 在线用户列表
                   var onlineHtml = "";
@@ -190,6 +239,8 @@
                       onlineHtml += "<span style='margin-left: 10px'>" + user.username + "</span>";
                       onlineHtml += "</div>";
                   }
+                  // console.info($("#" + jsonMessage.roomName).html());
+                  // $("#" + jsonMessage.roomName).html(jsonMessage.roomName + "(" + jsonMessage.userList.length + ")");
                   $("#onlineDiv").html(onlineHtml);
                   break;
               default:
@@ -201,6 +252,11 @@
        * 加入聊天室
        */
       function joinRoom(roomName) {
+          if (currentRoomName) {
+              alert("请先退出当前聊天室：" + currentRoomName);
+              return;
+          }
+
           var jsonMessage = {
               type: 6,
               roomName: roomName
@@ -208,8 +264,30 @@
           var jsonString = JSON.stringify(jsonMessage);
           websocket.send(jsonString);
 
-          $("#messagesWindow").val("正在等待加入聊天室：" + roomName);
+          $("#messagesWindow").html("正在加入聊天室：" + roomName + "\n");
           $("#onlineDiv").html("");
+      }
+
+      /**
+       * 退出聊天室
+       */
+      function exitRoom(roomName) {
+          if (roomName != currentRoomName) {
+              alert("您当前不在该聊天室");
+              return;
+          }
+
+          var jsonMessage = {
+              type: 7,
+              roomName: currentRoomName
+          };
+          var jsonString = JSON.stringify(jsonMessage);
+          websocket.send(jsonString);
+
+          $("#join" + currentRoomName).show();
+          $("#onlineDiv").html("");
+          currentRoomName = null;
+          showMessage("已退出聊天室：" + roomName + "\n");
       }
 
       /**
@@ -230,15 +308,15 @@
           }
 
           // 检查聊天室名称
-          if (!roomName) {
-              alert("获取不到聊天室信息：" + roomName);
+          if (!currentRoomName) {
+              alert("获取不到聊天室信息：" + currentRoomName);
               return;
           }
 
           /* 发送消息 */
           var jsonMessage = {
               type: 1,
-              roomName: roomName,
+              roomName: currentRoomName,
               message: $("#message").val()
           };
           var jsonString = JSON.stringify(jsonMessage);
