@@ -1,6 +1,7 @@
 package cn.javaee.imweb.controller;
 
 import cn.javaee.imweb.common.Constants;
+import cn.javaee.imweb.service.LoginService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -11,6 +12,7 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
+import javax.annotation.Resource;
 import javax.servlet.http.HttpSession;
 
 @Controller
@@ -20,6 +22,9 @@ public class AuthController {
 
     @Value("${imserver.websocket.url}")
     private String wsURL;
+
+    @Resource
+    private LoginService loginService;
 
     @GetMapping("/")
     public String index(@RequestParam(name = "username", required = false)
@@ -41,16 +46,22 @@ public class AuthController {
      * @return
      */
     @RequestMapping("/login")
-    public String login(@RequestParam String username, String password, Model model, HttpSession session) {
+    public String login(@RequestParam String username, @RequestParam String password, Model model, HttpSession session) {
         if (!StringUtils.hasText(username)) {
             return "login";
         }
 
-        model.addAttribute("username", username);
-        model.addAttribute("wsURL", wsURL);
-        session.setAttribute(Constants.SESSION_KEY, username);
+        JsonResult<String> result = loginService.authenticate(username, password);
+        if (result.isSuccess()) {
+            model.addAttribute("username", username);
+            model.addAttribute("wsURL", wsURL);
+            session.setAttribute(Constants.SESSION_KEY, username);
 
-        return "index";
+            return "index";
+        } else {
+            model.addAttribute("errormsg", result.getMessage());
+            return "login";
+        }
     }
 
     /**

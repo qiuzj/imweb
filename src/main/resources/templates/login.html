@@ -35,22 +35,22 @@
 <div class="container">
     <div class="row row-centered">
         <div class="well col-md-6 col-centered">
-            <h2>欢迎登录</h2>
+            <h2 th:align="center">欢迎登录</h2>
             <form action="/login" method="POST">
                 <div class="input-group input-group-md">
                     <span class="input-group-addon"><i class="glyphicon glyphicon-user" aria-hidden="true"></i></span>
-                    <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户邮箱"/>
+                    <input type="text" class="form-control" id="username" name="username" placeholder="请输入用户名" required/>
                 </div>
-                <div class="input-group input-group-md">
+                <div class="input-group input-group-md" style="margin-top: 5px;">
                     <span class="input-group-addon"><i class="glyphicon glyphicon-lock"></i></span>
-                    <input type="password" class="form-control" id="password" name="password" placeholder="请输入密码"/>
+                    <input type="password" class="form-control" id="password" name="password" placeholder="请输入密码" required/>
                 </div>
                 <br/>
                 <button type="submit" class="btn btn-success btn-block">登录</button>
             </form>
+            <p style="color: red; margin-top: 10px;" th:text="${errormsg}"/>
         </div>
     </div>
-    <p th:text="${errormsg}"/>
 </div>
 </body>
 
