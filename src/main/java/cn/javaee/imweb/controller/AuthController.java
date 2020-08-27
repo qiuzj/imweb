@@ -2,6 +2,7 @@ package cn.javaee.imweb.controller;
 
 import cn.javaee.imweb.common.Constants;
 import cn.javaee.imweb.service.LoginService;
+import cn.javaee.imweb.util.AuthUtils;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -53,6 +54,10 @@ public class AuthController {
 
         JsonResult<String> result = loginService.authenticate(username, password);
         if (result.isSuccess()) {
+            String loginToken = AuthUtils.getToken(username);
+            LOGGER.info("[loginToken] token: {}", loginToken);
+
+            model.addAttribute("loginToken", loginToken);
             model.addAttribute("username", username);
             model.addAttribute("wsURL", wsURL);
             session.setAttribute(Constants.SESSION_KEY, username);

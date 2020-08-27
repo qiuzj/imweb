@@ -11,6 +11,8 @@
 </head>
 <body>
   <input type="hidden" id="wsURL" th:value="${wsURL}">
+  <input type="hidden" id="loginToken" th:value="${loginToken}">
+
   <div>欢迎您！<i th:text="${username}" id="username"></i>
       <input type="button" id="logoutButton" value="退 出" style="margin-left: 15px">
   </div>
@@ -175,7 +177,8 @@
       function login() {
           var jsonMsg = {
               type: 0,
-              username: $("#username").html()
+              username: $("#username").html(),
+              loginToken: $("#loginToken").val()
           };
           var jsonString = JSON.stringify(jsonMsg);
           console.info("用户登录信息：" + JSON.stringify(jsonString));
