@@ -10,7 +10,7 @@
 	</parent>
 	<groupId>cn.javaee</groupId>
 	<artifactId>imweb</artifactId>
-	<version>0.0.2</version>
+	<version>0.0.4</version>
 	<packaging>war</packaging>
 	<name>imweb</name>
 	<description>IM Web Application</description>
